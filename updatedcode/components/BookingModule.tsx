@@ -379,7 +379,7 @@ const BookingModule: React.FC<BookingModuleProps> = ({ bookings }) => {
 
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-slate-800">Aging Report (Overdue  30 Days)</h3>
+                            <h3 className="font-bold text-slate-800">Aging Report (Overdue > 30 Days)</h3>
                             <button className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1 rounded text-slate-600">Export List</button>
                         </div>
                         <div className="overflow-y-auto max-h-64">
@@ -605,7 +605,7 @@ const BookingModule: React.FC<BookingModuleProps> = ({ bookings }) => {
                                              <FileCheck className="w-8 h-8 text-purple-600" />
                                              <div>
                                                  <h3 className="font-bold text-purple-900 text-sm">TDS Compliance (Section 194-IA)</h3>
-                                                 <p className="text-xs text-purple-700">For property 50L, ensure 1% TDS is paid to Govt.</p>
+                                                 <p className="text-xs text-purple-700">For property > 50L, ensure 1% TDS is paid to Govt.</p>
                                              </div>
                                          </div>
                                          <div className="flex items-center gap-3">

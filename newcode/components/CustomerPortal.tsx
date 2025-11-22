@@ -304,7 +304,7 @@ const CustomerPortal: React.FC<CustomerPortalProps> = ({ bookings, projects, con
                             <div className="bg-slate-100 p-4 rounded-xl border border-dashed border-slate-300 text-center">
                                 <Upload className="w-6 h-6 text-slate-400 mx-auto mb-2" />
                                 <p className="text-xs font-bold text-slate-600">Upload TDS Certificate (Form 16B)</p>
-                                <p className="text-[10px] text-slate-400 mt-1">Required for payments > 50L</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Required for payments  50L</p>
                             </div>
                         </div>
                     )}

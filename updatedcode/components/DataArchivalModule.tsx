@@ -81,7 +81,7 @@ const DataArchivalModule: React.FC = () => {
                             <div className="flex items-center justify-between border-t border-slate-100 pt-6">
                                 <div>
                                     <p className="font-bold text-slate-700">Lost Deals</p>
-                                    <p className="text-xs text-slate-500">Move 'Lost' leads inactive for  2 years.</p>
+                                    <p className="text-xs text-slate-500">Move 'Lost' leads inactive for > 2 years.</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input type="checkbox" checked={autoArchive.lost} onChange={(e) => setAutoArchive({...autoArchive, lost: e.target.checked})} className="sr-only peer" />
