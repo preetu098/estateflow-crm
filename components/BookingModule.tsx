@@ -141,7 +141,7 @@ const BookingModule: React.FC<BookingModuleProps> = ({ bookings }) => {
                             <AlertCircle className="w-4 h-4" /> Critical Overdue
                         </p>
                         <p className="text-2xl font-bold text-red-600 mt-2">₹{(totalOverdueAmount / 100000).toFixed(2)} L</p>
-                        <p className="text-xs text-red-500 mt-1">{overdueBookings.length} Customers > 30 Days</p>
+                        <p className="text-xs text-red-500 mt-1">{overdueBookings.length} Customers  30 Days</p>
                     </div>
                 </div>
 
@@ -452,7 +452,7 @@ const BookingModule: React.FC<BookingModuleProps> = ({ bookings }) => {
                                              <FileCheck className="w-8 h-8 text-purple-600" />
                                              <div>
                                                  <h3 className="font-bold text-purple-900 text-sm">TDS Compliance (Section 194-IA)</h3>
-                                                 <p className="text-xs text-purple-700">For property > 50L, ensure 1% TDS is paid to Govt.</p>
+                                                 <p className="text-xs text-purple-700">For property  50L, ensure 1% TDS is paid to Govt.</p>
                                              </div>
                                          </div>
                                          <div className="flex items-center gap-3">

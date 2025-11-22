@@ -309,7 +309,7 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
                                   </button>
                               ))}
                               {leads.filter(l => l.visitToken && !l.isTokenUsed).length === 0 && (
-                                  <span className="text-xs text-slate-600 italic">No active passes generated yet. Go to Leads -> Schedule Visit.</span>
+                                  <span className="text-xs text-slate-600 italic">No active passes generated yet. Go to Leads  Schedule Visit.</span>
                               )}
                           </div>
                       </div>
