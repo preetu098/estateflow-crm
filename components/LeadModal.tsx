@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Lead, LeadSource, LeadStage, Project, RemarkLog, Agent, ProjectType } from '../types';
 import { SUB_STAGES, RESIDENTIAL_CONFIGS, COMMERCIAL_TYPES } from '../constants';
-import { X, Clock, Save, Loader2, UserCircle, QrCode, Send, RefreshCw, Share2 } from 'lucide-react';
+import { X, Clock, Save, Loader2, UserCircle, QrCode, Send, RefreshCw, Share2, Target, Globe } from 'lucide-react';
 import { analyzeLeadWithAI, AIAnalysisResult } from '../services/geminiService';
 
 interface LeadModalProps {
@@ -367,6 +367,33 @@ const LeadModal: React.FC<LeadModalProps> = ({ isOpen, onClose, onSave, initialD
 
           {/* Right Column: AI, Assignment & Gate Pass */}
           <div className="space-y-6">
+
+            {/* Meta Digital Footprint (New) */}
+            {formData.metaData && (
+               <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm">
+                   <h4 className="text-sm font-bold text-blue-800 mb-3 flex items-center gap-2">
+                        <Globe className="w-4 h-4" /> Digital Footprint
+                   </h4>
+                   <div className="space-y-2 text-xs">
+                       <div className="flex justify-between">
+                           <span className="text-slate-500">Campaign:</span>
+                           <span className="font-medium text-slate-800">{formData.metaData.campaignName}</span>
+                       </div>
+                       <div className="flex justify-between">
+                           <span className="text-slate-500">Ad Set:</span>
+                           <span className="font-medium text-slate-800">{formData.metaData.adSetName}</span>
+                       </div>
+                       <div className="flex justify-between">
+                           <span className="text-slate-500">Creative:</span>
+                           <span className="font-medium text-slate-800">{formData.metaData.adName}</span>
+                       </div>
+                       <div className="mt-2 pt-2 border-t border-slate-100">
+                           <span className="text-slate-500 block mb-1">Form ID:</span>
+                           <span className="font-mono bg-slate-50 px-2 py-1 rounded">{formData.metaData.formId}</span>
+                       </div>
+                   </div>
+               </div>
+            )}
 
             {/* VIP Gate Pass Generator */}
             {formData.stage === LeadStage.VISIT_SCHEDULED && (

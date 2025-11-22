@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Lead, Agent, SiteVisit, LeadSource, LeadStage, Project } from '../types';
-import { Search, UserPlus, Clock, CheckCircle, AlertTriangle, Users, QrCode, LogOut, Bell, Shield, User, Camera, X, AlertCircle } from 'lucide-react';
+import { Search, UserPlus, Clock, CheckCircle, AlertTriangle, Users, QrCode, LogOut, Bell, Shield, User, Camera, X, AlertCircle, ArrowRightLeft } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 interface ReceptionModuleProps {
@@ -63,10 +63,11 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
     }
   };
 
-  const getAvailableAgent = (): Agent | null => {
-      // Round Robin Logic: Active, Presales, Online, Not Busy
+  // *** HANDOVER LOGIC: Assigns a Closing Manager (Sales Role) ***
+  const getAvailableCloser = (): Agent | null => {
+      // Round Robin Logic: Active, SALES ROLE, Online
       const eligible = agents
-        .filter(a => a.role === 'Presales' && a.active && a.status === 'Online')
+        .filter(a => a.role === 'Sales' && a.active && a.status === 'Online')
         .sort((a, b) => a.lastLeadAssignedAt - b.lastLeadAssignedAt);
       
       return eligible.length > 0 ? eligible[0] : null;
@@ -75,7 +76,7 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
   const handleNewRegistration = () => {
       if (!newName || !newMobile) return;
 
-      const assignedAgent = getAvailableAgent();
+      const assignedCloser = getAvailableCloser();
       
       // 1. Create Lead
       const newLead: Lead = {
@@ -87,18 +88,18 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
           source: newSource,
           project: newProject,
           stage: LeadStage.NEGOTIATION, // Direct to site visit stage
-          subStage: 'Fresh',
+          subStage: 'Site Visit Done',
           followUpDate: new Date().toISOString().split('T')[0],
           followUpTime: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-          agentName: assignedAgent ? assignedAgent.name : 'Unassigned',
-          agentId: assignedAgent ? assignedAgent.id : '',
+          agentName: assignedCloser ? assignedCloser.name : 'Unassigned',
+          agentId: assignedCloser ? assignedCloser.id : '',
           callCount: 0,
           remarksHistory: [{
               timestamp: new Date().toISOString(),
-              text: `Walk-in Registered at Reception. Assigned to ${assignedAgent ? assignedAgent.name : 'Unassigned'}.`,
+              text: `Walk-in Registered at Reception. Assigned to Closer ${assignedCloser ? assignedCloser.name : 'Unassigned'}.`,
               author: 'Reception'
           }],
-          aiScore: 50
+          aiScore: 60
       };
 
       onAddLead(newLead);
@@ -132,28 +133,48 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
           }
       }
 
+      // *** HANDOVER PROTOCOL ***
+      // If current agent is Presales, switch to Sales
+      let finalAgentId = targetLead.agentId;
+      let finalAgentName = targetLead.agentName;
+      let remarksText = 'Re-visited site. Checked in at reception.';
+
+      const currentAgent = agents.find(a => a.id === targetLead.agentId);
+      
+      // If currently assigned to Presales (or Unassigned), trigger Handover
+      if (!currentAgent || currentAgent.role === 'Presales') {
+          const closer = getAvailableCloser();
+          if (closer) {
+              finalAgentId = closer.id;
+              finalAgentName = closer.name;
+              remarksText = `Site Visit Check-in. HANDOVER from Presales (${targetLead.agentName}) to Closing Manager (${closer.name}).`;
+          }
+      }
+
+      // Update lead status
+      onUpdateLead({
+          ...targetLead,
+          agentId: finalAgentId,
+          agentName: finalAgentName,
+          stage: LeadStage.NEGOTIATION, // Bump to Negotiation
+          subStage: 'Site Visit Done',
+          remarksHistory: [...targetLead.remarksHistory, { timestamp: new Date().toISOString(), text: remarksText, author: 'Reception' }]
+      });
+
       const visit: SiteVisit = {
           id: `VS-${Date.now()}`,
           leadId: targetLead.id,
           visitorName: targetLead.name,
           mobile: targetLead.mobile,
           project: targetLead.project,
-          agentId: targetLead.agentId || '',
-          agentName: targetLead.agentName,
+          agentId: finalAgentId || '',
+          agentName: finalAgentName,
           checkInTime: new Date().toISOString(),
           status: 'Waiting',
           sourceType: 'Revisit'
       };
 
       onCheckIn(visit);
-      
-      // Update lead status if needed
-      onUpdateLead({
-          ...targetLead,
-          stage: LeadStage.NEGOTIATION,
-          remarksHistory: [...targetLead.remarksHistory, { timestamp: new Date().toISOString(), text: 'Re-visited site. Checked in at reception.', author: 'Reception' }]
-      });
-
       resetForm();
       if(isScannerOpen) setIsScannerOpen(false);
   };
@@ -188,11 +209,22 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
           isTokenUsed: true,
           remarksHistory: [...lead.remarksHistory, { timestamp: new Date().toISOString(), text: `QR Pass Scanned at Gate. Entry Allowed.`, author: 'Scanner' }]
       };
-      onUpdateLead(updatedLead);
-
-      // Check In
+      // Note: We don't call onUpdateLead here because handleExistingCheckIn will do it with the handover logic
+      
+      // Check In & Handover
       handleExistingCheckIn(updatedLead);
-      alert(`✅ VIP ACCESS GRANTED\n\nWelcome ${lead.name}!\nAgent: ${lead.agentName}\n\nNotification sent to agent.`);
+      
+      // Need to find the assigned closer to show in alert
+      // Since handleExistingCheckIn is async/detached in React state, we calc it locally for the alert
+      const currentAgent = agents.find(a => a.id === lead.agentId);
+      let msg = `Welcome ${lead.name}!`;
+      if (!currentAgent || currentAgent.role === 'Presales') {
+          msg += `\n\nHandover Initiated: Assigning Sales Manager...`;
+      } else {
+          msg += `\n\nManager: ${lead.agentName} notified.`;
+      }
+
+      alert(`✅ VIP ACCESS GRANTED\n\n${msg}`);
   };
 
   const resetForm = () => {
@@ -351,6 +383,12 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
                         <div className="text-right">
                             <p className="text-xs text-slate-500 uppercase">Managed By</p>
                             <p className="font-bold text-slate-800 text-lg">{foundLead.agentName}</p>
+                            {/* Handover Indicator */}
+                            {agents.find(a => a.id === foundLead.agentId)?.role === 'Presales' && (
+                                <p className="text-xs text-orange-600 font-bold mt-1 flex items-center gap-1 justify-end">
+                                    <ArrowRightLeft className="w-3 h-3" /> Handover to Sales
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -395,7 +433,7 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
                                 onClick={() => handleExistingCheckIn()}
                                 className="flex-[2] py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 flex items-center justify-center gap-2"
                              >
-                                 <CheckCircle className="w-5 h-5" /> Confirm Arrival
+                                 <CheckCircle className="w-5 h-5" /> Confirm & Handover
                              </button>
                         </div>
                     </div>
@@ -457,7 +495,7 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
 
                          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-500 flex items-start gap-2">
                              <UserPlus className="w-4 h-4 mt-0.5" />
-                             System will automatically assign this lead to the next available agent (Round Robin).
+                             System will automatically assign this lead to the next available Closing Manager (Round Robin).
                          </div>
 
                          <div className="flex gap-4 pt-2">
@@ -532,7 +570,7 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
                                                 onClick={() => onUpdateVisit({...visit, status: 'In Meeting'})}
                                                 className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded hover:bg-indigo-700"
                                              >
-                                                 Handover
+                                                 Attend
                                              </button>
                                          </div>
                                      ) : (
@@ -551,16 +589,16 @@ const ReceptionModule: React.FC<ReceptionModuleProps> = ({
             </div>
         </div>
 
-        {/* 2. AGENT ROSTER */}
+        {/* 2. SALES ROSTER */}
         <div className="h-1/2 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
             <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                    <Users className="w-5 h-5 text-blue-600" /> Sales Force Status
+                    <Users className="w-5 h-5 text-blue-600" /> Closing Managers (Sales)
                 </h3>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
                 <div className="grid grid-cols-2 gap-3">
-                    {agents.filter(a => a.role === 'Presales').map(agent => (
+                    {agents.filter(a => a.role === 'Sales' || a.role === 'SalesHead').map(agent => (
                         <div key={agent.id} className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-white">
                             <div className="relative">
                                 <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">

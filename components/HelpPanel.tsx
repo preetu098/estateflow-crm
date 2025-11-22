@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, PlayCircle, MessageCircle, FileText, HelpCircle } from 'lucide-react';
 
@@ -39,6 +40,16 @@ const HelpPanel: React.FC<HelpPanelProps> = ({ isOpen, onClose, view }) => {
             { title: 'Adding Sources', desc: 'Add new marketing sources in "CRM Masters" to make them available in Reception.' }
           ],
           video: 'Admin Dashboard Overview'
+        };
+      case 'channel-partners':
+        return {
+            title: 'Partner Connect Help',
+            items: [
+                { title: 'Approving KYC', desc: 'Go to Admin Console > KYC Approvals tab. Review RERA & Pan docs before clicking Approve.' },
+                { title: 'Lead Conflict Logic', desc: 'A lead is "Green" (Available) only if they do not exist in the database or have been inactive for >45 days.' },
+                { title: 'White-label Sharing', desc: 'In the Partner App Simulator, "Share Brochure" automatically strips builder contact info.' }
+            ],
+            video: 'Onboarding New Brokers'
         };
       case 'leads':
         return {

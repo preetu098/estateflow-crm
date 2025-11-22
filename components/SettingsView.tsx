@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Project, ProjectType, PricingConfig, Agent } from '../types';
-import { Plus, Trash2, MapPin, AlertCircle, ExternalLink, LayoutGrid, Users, Building, CreditCard, List, Zap, Save, ChevronRight, UserCheck, X } from 'lucide-react';
+import { Plus, Trash2, MapPin, AlertCircle, ExternalLink, LayoutGrid, Users, Building, CreditCard, List, Zap, Save, ChevronRight, UserCheck, X, Key, Smartphone, Link, Globe, Mail, Code, FileSpreadsheet, ArrowRight, Copy } from 'lucide-react';
 import Tooltip from './Tooltip';
 
 interface SettingsViewProps {
@@ -22,6 +22,12 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'users' | 'projects' | 'masters' | 'financials' | 'automation' | 'integrations'>('users');
   
+  // Integration Config States
+  const [integrationTab, setIntegrationTab] = useState<'meta' | 'portals' | 'google' | 'website' | 'email'>('meta');
+  const [magicBricksKey, setMagicBricksKey] = useState('');
+  const [housingKey, setHousingKey] = useState('');
+  const [generatedApiKey, setGeneratedApiKey] = useState('');
+
   // Local state for forms
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectLoc, setNewProjectLoc] = useState('');
@@ -105,6 +111,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleSaveConfig = () => {
       alert("Configuration Saved Globally! Changes reflected in Sales & Reception apps instantly.");
+  };
+
+  const generateWebApiKey = () => {
+      const key = "sk_live_" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      setGeneratedApiKey(key);
   };
 
   return (
@@ -433,12 +444,271 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* TAB: INTEGRATIONS */}
         {activeTab === 'integrations' && (
-             <div className="p-6 text-center py-12">
-                 <h3 className="text-slate-400 font-bold text-lg mb-2">API Integrations</h3>
-                 <p className="text-slate-500">Manage WhatsApp (Meta), Facebook Ads, and SMS Gateway keys here.</p>
-                 <div className="mt-4 bg-slate-100 p-4 rounded text-xs text-slate-600 inline-block text-left">
-                     <p className="font-bold">API Key Security:</p>
-                     <p>WARNING: Do not share these keys. Grants full access to data.</p>
+             <div className="flex h-full min-h-[600px]">
+                 {/* Integration Sidebar */}
+                 <div className="w-64 border-r border-slate-200 bg-slate-50 p-4 flex flex-col gap-2">
+                     <h3 className="text-xs font-bold text-slate-500 uppercase mb-2">Providers</h3>
+                     <button 
+                        onClick={() => setIntegrationTab('meta')}
+                        className={`text-left px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-3 transition ${integrationTab === 'meta' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                     >
+                         <LayoutGrid className="w-4 h-4" /> Meta (FB/Insta)
+                     </button>
+                     <button 
+                        onClick={() => setIntegrationTab('portals')}
+                        className={`text-left px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-3 transition ${integrationTab === 'portals' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                     >
+                         <Building className="w-4 h-4" /> Property Portals
+                     </button>
+                     <button 
+                        onClick={() => setIntegrationTab('google')}
+                        className={`text-left px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-3 transition ${integrationTab === 'google' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                     >
+                         <Globe className="w-4 h-4" /> Google Ads
+                     </button>
+                     <button 
+                        onClick={() => setIntegrationTab('website')}
+                        className={`text-left px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-3 transition ${integrationTab === 'website' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                     >
+                         <Code className="w-4 h-4" /> Website API
+                     </button>
+                     <button 
+                        onClick={() => setIntegrationTab('email')}
+                        className={`text-left px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-3 transition ${integrationTab === 'email' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                     >
+                         <Mail className="w-4 h-4" /> Email Parser
+                     </button>
+                 </div>
+
+                 {/* Integration Content */}
+                 <div className="flex-1 p-8 overflow-y-auto">
+                    
+                    {/* META Integration */}
+                    {integrationTab === 'meta' && (
+                        <div className="max-w-2xl">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white">
+                                    <LayoutGrid className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800">Meta (Facebook & Instagram) Ads</h3>
+                                    <p className="text-slate-500 text-sm">Sync Lead Ads & Attribution Data</p>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">App ID</label>
+                                        <input type="text" className="w-full p-2 border border-slate-300 rounded text-sm bg-slate-50" placeholder="1234567890" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">App Secret</label>
+                                        <input type="password" className="w-full p-2 border border-slate-300 rounded text-sm bg-slate-50" placeholder="••••••••••••••••" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        Long-Lived User Access Token
+                                        <Tooltip text="Generate this from the Graph API Explorer. Must have 'leads_retrieval' and 'ads_management' permissions." />
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input type="password" className="flex-1 p-2 border border-slate-300 rounded text-sm bg-slate-50" placeholder="EAAB..." />
+                                        <button className="bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-blue-700">Verify & Save</button>
+                                    </div>
+                                </div>
+                                <div className="pt-4 border-t border-slate-100 flex items-center gap-4">
+                                     <div className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+                                         <Link className="w-3 h-3" /> Connected
+                                     </div>
+                                     <span className="text-xs text-slate-500">Last sync: 2 mins ago</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PORTALS Integration */}
+                    {integrationTab === 'portals' && (
+                         <div className="max-w-3xl space-y-6">
+                             <div>
+                                <h3 className="text-lg font-bold text-slate-800 mb-1">Real Estate Portals</h3>
+                                <p className="text-slate-500 text-sm">Configure API keys to pull leads from major property sites.</p>
+                             </div>
+
+                             {/* MagicBricks */}
+                             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex gap-6">
+                                 <div className="w-12 h-12 bg-red-600 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-xs">MB</div>
+                                 <div className="flex-1 space-y-4">
+                                     <div className="flex justify-between">
+                                         <h4 className="font-bold text-slate-800">MagicBricks</h4>
+                                         <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                                         </label>
+                                     </div>
+                                     <div>
+                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                             XML Feed API Key 
+                                             <Tooltip text="Contact your MagicBricks account manager to request your 'XML Feed API Key'. Paste it here." />
+                                         </label>
+                                         <input 
+                                            type="password" 
+                                            value={magicBricksKey} 
+                                            onChange={(e) => setMagicBricksKey(e.target.value)}
+                                            className="w-full p-2 border border-slate-300 rounded text-sm" 
+                                            placeholder="Enter Key" 
+                                         />
+                                     </div>
+                                 </div>
+                             </div>
+
+                             {/* Housing.com */}
+                             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex gap-6">
+                                 <div className="w-12 h-12 bg-purple-600 rounded-xl flex-shrink-0 flex items-center justify-center text-white font-bold text-xs">H</div>
+                                 <div className="flex-1 space-y-4">
+                                     <div className="flex justify-between">
+                                         <h4 className="font-bold text-slate-800">Housing.com / Makaan</h4>
+                                         <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" className="sr-only peer" />
+                                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                                         </label>
+                                     </div>
+                                     <div>
+                                         <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                             Project ID / API Key
+                                             <Tooltip text="Provided by your Housing.com relationship manager." />
+                                         </label>
+                                         <input 
+                                            type="password" 
+                                            value={housingKey} 
+                                            onChange={(e) => setHousingKey(e.target.value)}
+                                            className="w-full p-2 border border-slate-300 rounded text-sm" 
+                                            placeholder="Enter Key" 
+                                         />
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                    )}
+
+                    {/* GOOGLE Integration */}
+                    {integrationTab === 'google' && (
+                         <div className="max-w-2xl">
+                             <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center">
+                                    <Globe className="w-6 h-6 text-blue-600" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800">Google Ads</h3>
+                                    <p className="text-slate-500 text-sm">Search & YouTube Lead Form Extensions</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm text-blue-800">
+                                    <strong>Instruction:</strong> Create a "Webhook" integration in your Google Ads Lead Form Extension and paste the URL below.
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Webhook URL</label>
+                                    <div className="flex gap-2">
+                                        <input type="text" readOnly value="https://api.estateflow.com/v1/hooks/google/12345" className="flex-1 p-2 border border-slate-300 rounded text-sm bg-slate-100 text-slate-600" />
+                                        <button className="p-2 bg-slate-200 hover:bg-slate-300 rounded text-slate-600" title="Copy"><Copy className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        Google Click ID (GCLID) Tracking
+                                        <Tooltip text="Google Click ID. Essential for tracking which specific keyword led to this sale." />
+                                    </label>
+                                    <p className="text-sm text-slate-600">Enabled automatically. System captures `gclid` parameter from webhook payload.</p>
+                                </div>
+
+                                <div className="pt-4 border-t border-slate-100 flex items-center gap-2">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase">Webhook Security Key:</label>
+                                    <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">secret_token_xyz</code>
+                                </div>
+                            </div>
+                         </div>
+                    )}
+
+                    {/* WEBSITE Integration */}
+                    {integrationTab === 'website' && (
+                         <div className="max-w-2xl">
+                             <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center text-white">
+                                    <Code className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800">Website / Custom API</h3>
+                                    <p className="text-slate-500 text-sm">Push leads from WordPress, Landing Pages, or Chatbots.</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">API Endpoint</label>
+                                    <div className="flex gap-2">
+                                        <input type="text" readOnly value="POST https://api.estateflow.com/v1/leads/create" className="flex-1 p-2 border border-slate-300 rounded text-sm bg-slate-100 text-slate-600" />
+                                        <button className="p-2 bg-slate-200 hover:bg-slate-300 rounded text-slate-600" title="Copy"><Copy className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">API Key</label>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            readOnly 
+                                            value={generatedApiKey || "••••••••••••••••••••••••••••••"} 
+                                            className="flex-1 p-2 border border-slate-300 rounded text-sm bg-slate-50 text-slate-600 font-mono" 
+                                        />
+                                        <button onClick={generateWebApiKey} className="bg-blue-600 text-white px-4 py-2 rounded font-bold text-sm hover:bg-blue-700">Generate New Key</button>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">Pass this key in the `Authorization: Bearer` header.</p>
+                                </div>
+                            </div>
+                         </div>
+                    )}
+
+                    {/* EMAIL Integration */}
+                    {integrationTab === 'email' && (
+                        <div className="max-w-2xl">
+                             <div className="flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white">
+                                    <Mail className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-800">Inbound Email Parser</h3>
+                                    <p className="text-slate-500 text-sm">Forward leads from sources that only send emails (JustDial, Sulekha).</p>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                                 <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+                                        Your Inbound Email Address
+                                        <Tooltip text="Use this email address for portals that do not have an API. Forward your enquiry emails here." />
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <input type="text" readOnly value="leads-p1@inbound.estateflow.com" className="flex-1 p-2 border border-slate-300 rounded text-sm bg-slate-100 text-slate-600" />
+                                        <button className="p-2 bg-slate-200 hover:bg-slate-300 rounded text-slate-600" title="Copy"><Copy className="w-4 h-4" /></button>
+                                    </div>
+                                </div>
+                                
+                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 text-sm text-slate-600">
+                                    <p className="font-bold mb-2">How it works:</p>
+                                    <ul className="list-disc pl-4 space-y-1">
+                                        <li>List this email on the classified site or set up auto-forwarding rule.</li>
+                                        <li>System parses the email body using Regex to find Mobile, Name, and Project.</li>
+                                        <li>Creates a new lead with Source = "Email Inquiry".</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                  </div>
              </div>
         )}

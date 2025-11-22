@@ -1,18 +1,21 @@
 
 import React, { useState } from 'react';
-import { Lead, LeadStage, LeadSource, Project } from '../types';
+import { Lead, LeadStage, LeadSource, Project, Agent } from '../types';
 import { STAGE_COLORS } from '../constants';
-import { Phone, Search, Filter, Calendar, Edit2, Trash2, ChevronDown, MessageSquare, Smartphone, User } from 'lucide-react';
+import { Phone, Search, Filter, Calendar, Edit2, Trash2, ChevronDown, MessageSquare, Smartphone, User, Upload, Lock } from 'lucide-react';
 import CommunicationModal from './CommunicationModal';
+import ImportLeadsModal from './ImportLeadsModal';
 
 interface LeadsTableProps {
   leads: Lead[];
   projects: Project[];
   onEdit: (lead: Lead) => void;
   onDelete: (id: string) => void;
+  onAddLead: (lead: Lead) => void; // For single or bulk add
+  currentUser: Agent;
 }
 
-const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDelete }) => {
+const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDelete, onAddLead, currentUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStage, setFilterStage] = useState<string>('All');
   const [filterProject, setFilterProject] = useState<string>('All');
@@ -20,6 +23,11 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDele
   const [commModal, setCommModal] = useState<{ isOpen: boolean; type: 'whatsapp'|'sms'; lead: Lead|null }>({
     isOpen: false, type: 'whatsapp', lead: null
   });
+
+  const [importModalOpen, setImportModalOpen] = useState(false);
+
+  // Permission Check
+  const canDelete = currentUser.role === 'SuperAdmin' || currentUser.role === 'TeamLeader';
 
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = 
@@ -35,6 +43,10 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDele
 
   const handleCommClick = (lead: Lead, type: 'whatsapp'|'sms') => {
     setCommModal({ isOpen: true, type, lead });
+  };
+  
+  const handleBulkImport = (newLeads: Lead[]) => {
+      newLeads.forEach(l => onAddLead(l));
   };
 
   return (
@@ -77,6 +89,13 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDele
              </select>
              <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           </div>
+
+          <button 
+             onClick={() => setImportModalOpen(true)}
+             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition border border-slate-200"
+          >
+              <Upload className="w-4 h-4" /> Import CSV
+          </button>
         </div>
       </div>
 
@@ -156,6 +175,8 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDele
                       <Smartphone className="w-4 h-4" />
                     </button>
                     <div className="w-px h-4 bg-slate-300 mx-1 my-auto"></div>
+                    
+                    {/* Presales cannot Edit Booked leads or Delete */}
                     <button 
                       onClick={() => onEdit(lead)} 
                       className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
@@ -163,13 +184,20 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDele
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button 
-                      onClick={() => onDelete(lead.id)} 
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
-                      title="Delete Lead"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    
+                    {canDelete ? (
+                        <button 
+                        onClick={() => onDelete(lead.id)} 
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete Lead"
+                        >
+                        <Trash2 className="w-4 h-4" />
+                        </button>
+                    ) : (
+                        <button className="p-1.5 text-slate-300 cursor-not-allowed" title="Restricted">
+                             <Lock className="w-4 h-4" />
+                        </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -193,6 +221,14 @@ const LeadsTable: React.FC<LeadsTableProps> = ({ leads, projects, onEdit, onDele
         onClose={() => setCommModal(prev => ({...prev, isOpen: false}))} 
         lead={commModal.lead}
         type={commModal.type}
+      />
+
+      <ImportLeadsModal 
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleBulkImport}
+        projects={projects}
+        existingLeads={leads}
       />
     </div>
   );

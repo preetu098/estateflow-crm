@@ -18,7 +18,10 @@ export enum LeadSource {
   WALK_IN = 'Walk-in',
   MAGIC_BRICKS = 'Magic Bricks',
   HOUSING_COM = 'Housing.com',
-  CHANNEL_PARTNER = 'Channel Partner'
+  CHANNEL_PARTNER = 'Channel Partner',
+  LINKEDIN = 'LinkedIn',
+  EMAIL_PARSER = 'Email Inquiry',
+  CSV_IMPORT = 'Bulk Import'
 }
 
 export enum ProjectType {
@@ -30,6 +33,18 @@ export interface RemarkLog {
   timestamp: string;
   text: string;
   author: string;
+}
+
+export interface MetaAttribution {
+  adId?: string;
+  adName?: string;
+  adSetId?: string;
+  adSetName?: string;
+  campaignId?: string;
+  campaignName?: string;
+  platform?: string;
+  formId?: string;
+  formName?: string;
 }
 
 export interface Lead {
@@ -59,6 +74,9 @@ export interface Lead {
   visitToken?: string;
   visitTokenExpiry?: string; // ISO String
   isTokenUsed?: boolean;
+
+  // Meta / Digital Footprint
+  metaData?: MetaAttribution;
 }
 
 export interface UnitType {
@@ -108,7 +126,8 @@ export interface AgentSession {
 export interface Agent {
   id: string;
   name: string;
-  role: 'TeamLeader' | 'Presales' | 'SalesHead' | 'SuperAdmin' | 'Reception';
+  // 'Sales' is the Closing Manager. 'Presales' is the Tele-caller.
+  role: 'TeamLeader' | 'Presales' | 'Sales' | 'SalesHead' | 'SuperAdmin' | 'Reception';
   email?: string;
   mobile?: string;
   reportingManagerId?: string;
@@ -267,28 +286,55 @@ export interface ProjectMilestone {
 
 // --- Channel Partner Types ---
 
+export interface CPDocument {
+    name: 'RERA Certificate' | 'Pan Card' | 'GST Certificate' | 'Cancelled Cheque';
+    url: string;
+    status: 'Pending' | 'Verified' | 'Rejected';
+}
+
 export interface ChannelPartner {
     id: string;
-    name: string;
+    name: string; // Owner Name
     firmName: string;
     mobile: string;
+    email?: string;
     reraId: string;
     tier: 'Silver' | 'Gold' | 'Platinum';
     status: 'Pending' | 'Active' | 'Blacklisted';
     totalSalesValue: number;
     commissionEarned: number;
     leadsCount: number;
+    
+    // KYC & Bank Info
+    panNumber?: string;
+    gstNumber?: string;
+    bankDetails?: {
+        accountName: string;
+        accountNumber: string;
+        ifsc: string;
+        bankName: string;
+    };
+    documents?: CPDocument[];
 }
 
-export interface CommissionRecord {
+export interface CommissionInvoice {
     id: string;
     partnerId: string;
-    bookingId: string;
-    unitNumber: string;
+    bookingId?: string; // Linked booking
+    unitNumber?: string;
     amount: number;
-    status: 'Pending' | 'Invoiced' | 'Paid';
-    invoiceUrl?: string;
-    date: string;
+    invoiceDate: string;
+    invoiceNumber: string;
+    status: 'Unbilled' | 'Processing' | 'Paid' | 'Rejected';
+    fileUrl?: string;
+}
+
+export interface MarketingCollateral {
+    id: string;
+    projectId: string;
+    title: string; // e.g. "Project Brochure", "Floor Plans"
+    type: 'PDF' | 'Image' | 'Video';
+    url: string;
 }
 
 // --- Reception / GRE Types ---
@@ -306,4 +352,88 @@ export interface SiteVisit {
     status: 'Waiting' | 'In Meeting' | 'Completed';
     sourceType: 'Fresh' | 'Revisit';
     waitDuration?: number; // Minutes
+}
+
+// --- Marketing Module Types ---
+
+export interface MetaAd {
+    id: string;
+    name: string;
+    leads: number;
+    cpl: number;
+}
+
+export interface MetaAdSet {
+    id: string;
+    name: string;
+    ads: MetaAd[];
+}
+
+export interface MarketingCampaign {
+    id: string;
+    metaCampaignId?: string; // The Facebook Campaign ID
+    name: string;
+    platform: 'Facebook' | 'Google' | 'Housing' | 'Offline';
+    budget: number; // Total Budget
+    dailyBudget?: number; // Daily Budget from Meta
+    spent: number;
+    leadsGenerated: number;
+    bookingsGenerated: number;
+    status: 'Active' | 'Paused' | 'Ended';
+    startDate: string;
+    endDate?: string;
+    utmSource: string;
+    adSets?: MetaAdSet[]; // Hierarchical data
+}
+
+export interface DripStep {
+    day: number; // e.g. Day 1, Day 3
+    type: 'WhatsApp' | 'Email' | 'SMS';
+    content: string;
+}
+
+// --- Construction Module Types ---
+
+export interface ConstructionUpdate {
+    id: string;
+    projectId: string;
+    towerName: string;
+    milestoneName: string; // "Plinth", "1st Slab"
+    percentageComplete: number;
+    updateDate: string;
+    photoUrl?: string;
+    engineerName: string;
+    status: 'Pending Approval' | 'Approved';
+}
+
+// --- Incentive Module Types ---
+
+export interface IncentiveSlab {
+    minUnits: number;
+    maxUnits: number;
+    amountPerUnit: number;
+}
+
+export interface IncentiveScheme {
+    id: string;
+    role: 'Presales' | 'Sales';
+    slabs: IncentiveSlab[];
+    kicker: number; // Extra per unit for difficult inventory
+}
+
+export interface EmployeeTarget {
+    agentId: string;
+    period: string; // e.g. "Oct 2024"
+    target: number; // Unit count
+    achieved: number; // Unit count
+    incentiveEarned: number;
+}
+
+// --- Integration Types ---
+
+export type IntegrationProvider = '99acres' | 'MagicBricks' | 'Housing' | 'Google' | 'Website' | 'Facebook';
+
+export interface CsvMapping {
+    csvHeader: string;
+    crmField: keyof Lead | 'skip';
 }

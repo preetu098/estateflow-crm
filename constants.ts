@@ -1,5 +1,5 @@
 
-import { Lead, LeadSource, LeadStage, Project, ProjectType, CommunicationTemplate, Agent, Booking, PaymentStatus, Unit, ChannelPartner, ProjectMilestone, PricingConfig } from './types';
+import { Lead, LeadSource, LeadStage, Project, ProjectType, CommunicationTemplate, Agent, Booking, PaymentStatus, Unit, ChannelPartner, ProjectMilestone, PricingConfig, CommissionInvoice, MarketingCollateral, MarketingCampaign, IncentiveScheme, ConstructionUpdate } from './types';
 
 export const RESIDENTIAL_CONFIGS = ['1 BHK', '2 BHK', '3 BHK', '4 BHK', 'NA'];
 export const COMMERCIAL_TYPES = ['Office', 'Retail Shop', 'Showroom', 'Warehouse', 'Co-working', 'Other', 'NA'];
@@ -58,15 +58,18 @@ const PRESALES_NAMES = [
   'Tejaswi sonwane',
   'Sapna Jaiswal',
   'Satyam thakur',
-  'Sarika wagh',
-  'Shrutika jadhav',
-  'Taslima Tadavi',
-  'Shivangi singh',
-  'Darshana Avgune'
+  'Sarika wagh'
+];
+
+// Sales (Closing) Managers
+const SALES_NAMES = [
+    'Amit (Sales Head)',
+    'Rohit Closer',
+    'Vikram Senior'
 ];
 
 export const INITIAL_AGENTS: Agent[] = [
-  // Team Leader
+  // Team Leader / SuperAdmin
   { 
     id: 'tl1', 
     name: 'Admin User', 
@@ -76,27 +79,35 @@ export const INITIAL_AGENTS: Agent[] = [
     lastLeadAssignedAt: 0,
     sessions: [{ loginTime: `${today}T09:00:00.000Z`, logoutTime: undefined }]
   },
-  { 
-    id: 'tl2', 
-    name: 'Amit (Sales Head)', 
-    role: 'SalesHead', 
-    active: false, 
+  // Reception
+  {
+    id: 'rec1',
+    name: 'Front Desk',
+    role: 'Reception',
+    active: false,
     status: 'Online',
     lastLeadAssignedAt: 0,
-    sessions: [{ loginTime: `${today}T09:00:00.000Z`, logoutTime: undefined }]
+    sessions: []
   },
-  // Generate Agents from the provided list
+  // Generate Presales Agents
   ...PRESALES_NAMES.map((name, index) => ({
-    id: `a${index + 1}`,
+    id: `presales${index + 1}`,
     name: name,
     role: 'Presales' as const,
     active: true,
-    status: (index % 3 === 0 ? 'Online' : index % 3 === 1 ? 'Break' : 'Offline') as any, // Mock status distribution
+    status: (index % 2 === 0 ? 'Online' : 'Busy') as any, 
     lastLeadAssignedAt: Date.now() - (Math.random() * 1000000),
-    sessions: [
-        { loginTime: `${today}T09:00:00.000Z`, logoutTime: `${today}T13:00:00.000Z`, durationMinutes: 240 },
-        ...(index % 3 === 0 || index % 3 === 1 ? [{ loginTime: `${today}T14:00:00.000Z`, logoutTime: undefined }] : [])
-    ]
+    sessions: []
+  })),
+  // Generate Sales Agents (Closers)
+  ...SALES_NAMES.map((name, index) => ({
+      id: `sales${index + 1}`,
+      name: name,
+      role: 'Sales' as const, // Explicit Sales Role
+      active: true,
+      status: 'Online' as any,
+      lastLeadAssignedAt: Date.now(),
+      sessions: []
   }))
 ];
 
@@ -105,7 +116,7 @@ export const SUB_STAGES: Record<LeadStage, string[]> = {
   [LeadStage.CONNECTED]: ['RNR (Ring No Response)', 'Busy', 'Switch Off', 'Call Back Later', 'Not Interested', 'Interested'],
   [LeadStage.VISIT_SCHEDULED]: ['Confirmed', 'Tentative', 'Rescheduled', 'Cab Required'],
   [LeadStage.QUALIFIED]: ['Hot', 'Warm', 'Cold', 'Budget Issue', 'Location Issue'],
-  [LeadStage.NEGOTIATION]: ['Price Negotiation', 'Unit Selection', 'Legal Check', 'Payment Plan'],
+  [LeadStage.NEGOTIATION]: ['Site Visit Done', 'Price Negotiation', 'Unit Selection', 'Legal Check', 'Payment Plan'],
   [LeadStage.BOOKED]: ['Token Received', 'Agreement Signed'],
   [LeadStage.LOST]: ['Competitor', 'Budget Mismatch', 'Location Mismatch', 'Dropped', 'Invalid Number'],
   [LeadStage.UNRESPONSIVE]: ['Stopped Picking Up', 'Blocked'],
@@ -120,9 +131,84 @@ export const MOCK_TEMPLATES: CommunicationTemplate[] = [
 ];
 
 export const MOCK_CHANNEL_PARTNERS: ChannelPartner[] = [
-    { id: 'cp1', name: 'Sharma Estates', firmName: 'Sharma Realty', mobile: '9988776655', reraId: 'A51700000123', tier: 'Gold', status: 'Active', totalSalesValue: 25000000, commissionEarned: 750000, leadsCount: 12 },
-    { id: 'cp2', name: 'PropTiger', firmName: 'PropTiger Realty', mobile: '9988000000', reraId: 'A51700000999', tier: 'Platinum', status: 'Active', totalSalesValue: 150000000, commissionEarned: 6000000, leadsCount: 50 },
-    { id: 'cp3', name: 'Local Broker 1', firmName: 'Kalyan Homes', mobile: '8877665544', reraId: 'A51700000555', tier: 'Silver', status: 'Pending', totalSalesValue: 0, commissionEarned: 0, leadsCount: 1 },
+    { 
+        id: 'cp1', 
+        name: 'Rajesh Sharma', 
+        firmName: 'Sharma Realty', 
+        mobile: '9988776655', 
+        reraId: 'A51700000123', 
+        tier: 'Gold', 
+        status: 'Active', 
+        totalSalesValue: 25000000, 
+        commissionEarned: 750000, 
+        leadsCount: 12,
+        documents: [
+            { name: 'RERA Certificate', url: '#', status: 'Verified' },
+            { name: 'Pan Card', url: '#', status: 'Verified' }
+        ]
+    },
+    { 
+        id: 'cp2', 
+        name: 'Priya Deshmukh', 
+        firmName: 'PropTiger Realty', 
+        mobile: '9988000000', 
+        reraId: 'A51700000999', 
+        tier: 'Platinum', 
+        status: 'Active', 
+        totalSalesValue: 150000000, 
+        commissionEarned: 6000000, 
+        leadsCount: 50,
+        documents: [
+            { name: 'RERA Certificate', url: '#', status: 'Verified' },
+            { name: 'Pan Card', url: '#', status: 'Verified' }
+        ]
+    },
+    { 
+        id: 'cp3', 
+        name: 'Amit Local', 
+        firmName: 'Kalyan Homes', 
+        mobile: '8877665544', 
+        reraId: 'A51700000555', 
+        tier: 'Silver', 
+        status: 'Pending', 
+        totalSalesValue: 0, 
+        commissionEarned: 0, 
+        leadsCount: 1,
+        documents: [
+            { name: 'RERA Certificate', url: '#', status: 'Pending' },
+            { name: 'Pan Card', url: '#', status: 'Pending' }
+        ]
+    },
+];
+
+export const MOCK_INVOICES: CommissionInvoice[] = [
+    {
+        id: 'inv1',
+        partnerId: 'cp1',
+        bookingId: 'BK-101',
+        unitNumber: 'Wing A-1204',
+        amount: 150000,
+        invoiceDate: '2024-10-20',
+        invoiceNumber: 'INV-001',
+        status: 'Paid',
+    },
+    {
+        id: 'inv2',
+        partnerId: 'cp1',
+        bookingId: 'BK-105',
+        unitNumber: 'Wing B-502',
+        amount: 125000,
+        invoiceDate: '2024-11-05',
+        invoiceNumber: 'INV-003',
+        status: 'Processing',
+    }
+];
+
+export const MOCK_COLLATERAL: MarketingCollateral[] = [
+    { id: 'col1', projectId: 'p1', title: 'Krishna Trident - E-Brochure', type: 'PDF', url: '#' },
+    { id: 'col2', projectId: 'p1', title: 'Krishna Trident - Walkthrough', type: 'Video', url: '#' },
+    { id: 'col3', projectId: 'p1', title: 'Wing A - Floor Plans', type: 'PDF', url: '#' },
+    { id: 'col4', projectId: 'p2', title: 'GoldClass - Investor Deck', type: 'PDF', url: '#' },
 ];
 
 export const COMMISSION_TIERS = {
@@ -130,6 +216,92 @@ export const COMMISSION_TIERS = {
     'Gold': 0.03,
     'Platinum': 0.04
 };
+
+// --- New Mock Data for Strategic Modules ---
+
+export const MOCK_CAMPAIGNS: MarketingCampaign[] = [
+    {
+        id: 'cmp1',
+        metaCampaignId: '120238474',
+        name: 'Diwali Bonanza - Facebook',
+        platform: 'Facebook',
+        budget: 500000,
+        dailyBudget: 5000,
+        spent: 350000,
+        leadsGenerated: 450,
+        bookingsGenerated: 12,
+        status: 'Active',
+        startDate: '2024-10-01',
+        endDate: '2024-12-31',
+        utmSource: 'fb_ads_diwali',
+        adSets: [
+            { id: 'as1', name: 'Pune_IT_Professionals_25-40', ads: [
+                { id: 'ad1', name: 'Video_Walkthrough_v2', leads: 120, cpl: 250 },
+                { id: 'ad2', name: 'Static_Diwali_Offer', leads: 80, cpl: 400 }
+            ]},
+            { id: 'as2', name: 'Lookalike_Previous_Buyers', ads: [
+                { id: 'ad3', name: 'Video_Testimonial', leads: 250, cpl: 180 }
+            ]}
+        ]
+    },
+    {
+        id: 'cmp2',
+        metaCampaignId: '889922334',
+        name: 'Google Search - Luxury',
+        platform: 'Google',
+        budget: 800000,
+        dailyBudget: 10000,
+        spent: 780000,
+        leadsGenerated: 200,
+        bookingsGenerated: 8,
+        status: 'Active',
+        startDate: '2024-09-15',
+        utmSource: 'google_cpc_lux'
+    },
+    {
+        id: 'cmp3',
+        name: 'Housing.com Premium Slot',
+        platform: 'Housing',
+        budget: 200000,
+        spent: 200000,
+        leadsGenerated: 150,
+        bookingsGenerated: 3,
+        status: 'Ended',
+        startDate: '2024-08-01',
+        endDate: '2024-09-01',
+        utmSource: 'housing_prem'
+    }
+];
+
+export const MOCK_INCENTIVES: IncentiveScheme[] = [
+    {
+        id: 'inc1',
+        role: 'Presales',
+        slabs: [
+            { minUnits: 0, maxUnits: 3, amountPerUnit: 2000 },
+            { minUnits: 4, maxUnits: 6, amountPerUnit: 3500 },
+            { minUnits: 7, maxUnits: 99, amountPerUnit: 5000 }
+        ],
+        kicker: 500 // Extra for Site Visit conversion
+    },
+    {
+        id: 'inc2',
+        role: 'Sales',
+        slabs: [
+            { minUnits: 0, maxUnits: 2, amountPerUnit: 10000 },
+            { minUnits: 3, maxUnits: 5, amountPerUnit: 15000 },
+            { minUnits: 6, maxUnits: 99, amountPerUnit: 25000 }
+        ],
+        kicker: 2000 // Extra for West Facing units
+    }
+];
+
+export const MOCK_CONSTRUCTION_LOGS: ConstructionUpdate[] = [
+    { id: 'log1', projectId: 'p1', towerName: 'Wing A', milestoneName: 'Plinth Level', percentageComplete: 100, updateDate: '2024-08-15', engineerName: 'Rakesh Civil', status: 'Approved' },
+    { id: 'log2', projectId: 'p1', towerName: 'Wing A', milestoneName: '1st Slab', percentageComplete: 100, updateDate: '2024-09-20', engineerName: 'Rakesh Civil', status: 'Approved' },
+    { id: 'log3', projectId: 'p1', towerName: 'Wing A', milestoneName: '5th Slab', percentageComplete: 100, updateDate: '2024-11-01', engineerName: 'Suresh Site', status: 'Approved' },
+    { id: 'log4', projectId: 'p1', towerName: 'Wing B', milestoneName: 'Plinth Level', percentageComplete: 80, updateDate: '2024-11-05', engineerName: 'Suresh Site', status: 'Pending Approval' },
+];
 
 export const MOCK_LEADS: Lead[] = [
   {
@@ -145,16 +317,28 @@ export const MOCK_LEADS: Lead[] = [
     subStage: 'Token Received',
     followUpDate: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     followUpTime: '10:00',
-    agentName: 'Tejaswi sonwane',
-    agentId: 'a1',
+    agentName: 'Rohit Closer', // Sales Agent
+    agentId: 'sales2',
     callCount: 3,
     remarksHistory: [
       { timestamp: new Date(Date.now() - 86400000 * 5).toISOString(), text: 'Lead received from FB.', author: 'System' },
       { timestamp: new Date(Date.now() - 86400000 * 2).toISOString(), text: 'Spoke to client, interested in 2BHK.', author: 'Tejaswi sonwane' },
       { timestamp: new Date(Date.now() - 86400000 * 1).toISOString(), text: 'Scheduled site visit for tomorrow.', author: 'Tejaswi sonwane' },
+      { timestamp: new Date(Date.now()).toISOString(), text: 'Handover to Sales. Booking Confirmed.', author: 'Reception' },
     ],
     aiScore: 95,
-    aiSummary: "High intent buyer, booked 2BHK."
+    aiSummary: "High intent buyer, booked 2BHK.",
+    metaData: {
+        adId: 'ad1',
+        adName: 'Video_Walkthrough_v2',
+        adSetId: 'as1',
+        adSetName: 'Pune_IT_Professionals_25-40',
+        campaignId: '120238474',
+        campaignName: 'Diwali Bonanza - Facebook',
+        platform: 'facebook',
+        formId: '998877',
+        formName: 'Brochure_Download_Form'
+    }
   },
   {
     id: 'LD-1002',
@@ -171,7 +355,7 @@ export const MOCK_LEADS: Lead[] = [
     followUpDate: '',
     followUpTime: '',
     agentName: 'Sapna Jaiswal',
-    agentId: 'a2',
+    agentId: 'presales2',
     callCount: 5,
     remarksHistory: [
       { timestamp: new Date(Date.now() - 86400000 * 10).toISOString(), text: 'Inquired about pricing.', author: 'System' },
@@ -196,7 +380,7 @@ export const MOCK_LEADS: Lead[] = [
     followUpDate: new Date().toISOString().split('T')[0],
     followUpTime: '14:00',
     agentName: 'Satyam thakur',
-    agentId: 'a3',
+    agentId: 'presales3',
     callCount: 0,
     remarksHistory: [
         { timestamp: new Date(Date.now() - 86400000 * 1).toISOString(), text: 'Referred by CP Sharma Estates.', author: 'System' }

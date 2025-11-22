@@ -37,19 +37,21 @@ const SalesModule: React.FC<SalesModuleProps> = ({
     const [showBookingModal, setShowBookingModal] = useState(false);
 
     // --- VISITS TAB LOGIC ---
-    const today = new Date().toISOString().split('T')[0];
-    const scheduledVisits = leads.filter(l => l.stage === LeadStage.VISIT_SCHEDULED && l.followUpDate === today);
+    // Sales Agent Filter: Show leads in 'Negotiation' (Arrived) or 'Visit Scheduled' (Expected) or 'Booked'
+    // Hide cold leads.
+    const relevantLeads = leads.filter(l => 
+        l.stage === LeadStage.NEGOTIATION || 
+        l.stage === LeadStage.VISIT_SCHEDULED ||
+        l.stage === LeadStage.BOOKED ||
+        l.stage === LeadStage.QUALIFIED
+    );
 
-    const handleCheckIn = (lead: Lead) => {
-        if (confirm(`Check-in ${lead.name} for Site Visit?`)) {
-            onUpdateLead({
-                ...lead,
-                stage: LeadStage.NEGOTIATION,
-                remarksHistory: [...lead.remarksHistory, { timestamp: new Date().toISOString(), text: 'Site Visit Check-in Completed.', author: 'Gatekeeper' }]
-            });
-            setActiveLead(lead);
-            setViewMode('inventory'); // Auto-switch to closing mode
-        }
+    const activeVisits = relevantLeads.filter(l => l.stage === LeadStage.NEGOTIATION); // Checked in at reception
+    const upcomingVisits = relevantLeads.filter(l => l.stage === LeadStage.VISIT_SCHEDULED); // Not yet checked in
+
+    const handleAttend = (lead: Lead) => {
+        setActiveLead(lead);
+        setViewMode('inventory'); // Auto-switch to closing mode
     };
 
     // --- INVENTORY TAB LOGIC ---
@@ -68,21 +70,28 @@ const SalesModule: React.FC<SalesModuleProps> = ({
 
     // --- COST SHEET CALCULATOR ---
     const calculateCost = (unit: Unit): CostSheet => {
-        // Ensure numeric types for arithmetic operations to avoid TS errors
-        const floor = Number(unit.floor);
-        const carpetArea = Number(unit.carpetArea);
+        // Explicitly cast operands to numbers and provide defaults to prevent TS arithmetic errors or NaN
+        const floor = Number(unit.floor) || 0;
+        const carpetArea = Number(unit.carpetArea) || 0;
+        
+        // Safe access to pricing config with null checks and default 0
+        const baseRate = Number(pricingConfig?.baseRate ?? 0);
+        const floorRiseRate = Number(pricingConfig?.floorRise ?? 0);
+        const amenities = Number(pricingConfig?.amenities ?? 0);
+        const parking = Number(parkingSelected ? (pricingConfig?.parking ?? 0) : 0);
+        const gst = Number(pricingConfig?.gst ?? 0);
+        const registration = Number(pricingConfig?.registration ?? 0);
+        const stampDuty = Number(pricingConfig?.stampDuty ?? 0);
 
-        const floorRiseCost = floor * pricingConfig.floorRise * carpetArea;
-        const baseCost = unit.basePrice + floorRiseCost; // unit.basePrice should ideally come from pricingConfig.baseRate * carpetArea, but simplified here
+        const floorRiseCost = floor * floorRiseRate * carpetArea;
+        
         // Re-calc base price if dynamic mode
-        const dynamicBasePrice = pricingConfig.baseRate * carpetArea;
+        const dynamicBasePrice = baseRate * carpetArea;
         const actualBaseCost = dynamicBasePrice + floorRiseCost;
 
-        const amenities = pricingConfig.amenities;
-        const parking = parkingSelected ? pricingConfig.parking : 0;
         const gross = actualBaseCost + amenities + parking;
-        const taxes = gross * pricingConfig.gst; // GST
-        const totalBeforeDiscount = gross + taxes + pricingConfig.registration + (actualBaseCost * pricingConfig.stampDuty);
+        const taxes = gross * gst; // GST
+        const totalBeforeDiscount = gross + taxes + registration + (actualBaseCost * stampDuty);
         
         const discountAmount = discount * carpetArea;
         const finalPrice = totalBeforeDiscount - discountAmount;
@@ -104,7 +113,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({
     const handleBlockUnit = () => {
         if (!selectedUnit) return;
         if (!activeLead) {
-            alert("Please select a Lead (Check-in) first before blocking.");
+            alert("Please select a Lead (Active Client) first before blocking.");
             return;
         }
         
@@ -134,7 +143,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({
             carpetArea: `${selectedUnit.carpetArea} sqft`,
             parkingSlot: parkingSelected ? 'Pending Allocation' : 'NA',
             
-            agreementValue: costSheet.finalPrice * 0.9, // Approx breakdown
+            agreementValue: Number(costSheet.finalPrice) * 0.9, // Approx breakdown
             taxes: costSheet.taxes,
             otherCharges: costSheet.amenities,
             totalCost: costSheet.finalPrice,
@@ -143,9 +152,9 @@ const SalesModule: React.FC<SalesModuleProps> = ({
             bookingDate: new Date().toISOString().split('T')[0],
             status: 'Active',
             paymentSchedule: [
-                { id: 'pm1', name: 'Booking Token', percentage: 10, amount: costSheet.finalPrice * 0.1, dueDate: today, status: PaymentStatus.PAID, paidDate: today },
-                { id: 'pm2', name: 'Agreement (20%)', percentage: 20, amount: costSheet.finalPrice * 0.2, dueDate: new Date(Date.now() + 30*24*60*60*1000).toISOString(), status: PaymentStatus.UPCOMING },
-                { id: 'pm3', name: 'Plinth Level (15%)', percentage: 15, amount: costSheet.finalPrice * 0.15, dueDate: '2025-01-01', status: PaymentStatus.UPCOMING },
+                { id: 'pm1', name: 'Booking Token', percentage: 10, amount: Number(costSheet.finalPrice) * 0.1, dueDate: new Date().toISOString().split('T')[0], status: PaymentStatus.PAID, paidDate: new Date().toISOString().split('T')[0] },
+                { id: 'pm2', name: 'Agreement (20%)', percentage: 20, amount: Number(costSheet.finalPrice) * 0.2, dueDate: new Date(Date.now() + 30*24*60*60*1000).toISOString(), status: PaymentStatus.UPCOMING },
+                { id: 'pm3', name: 'Plinth Level (15%)', percentage: 15, amount: Number(costSheet.finalPrice) * 0.15, dueDate: '2025-01-01', status: PaymentStatus.UPCOMING },
             ],
             documents: [],
             tickets: [],
@@ -177,14 +186,15 @@ const SalesModule: React.FC<SalesModuleProps> = ({
                     <h2 className="font-bold text-slate-800 flex items-center gap-2">
                         <ScanLine className="w-5 h-5 text-blue-600" /> Sales Center
                     </h2>
+                    <p className="text-xs text-slate-500 mt-1">Role: Closing Manager</p>
                 </div>
                 <div className="p-2 space-y-1">
                     <button 
                         onClick={() => setViewMode('visits')}
                         className={`w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 transition ${viewMode === 'visits' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
-                        <User className="w-5 h-5" /> Site Visits
-                        {scheduledVisits.length > 0 && <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full ml-auto">{scheduledVisits.length}</span>}
+                        <User className="w-5 h-5" /> Active Customers
+                        {activeVisits.length > 0 && <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full ml-auto animate-pulse">{activeVisits.length}</span>}
                     </button>
                     <button 
                         onClick={() => setViewMode('inventory')}
@@ -197,7 +207,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({
                 {/* Active Lead Context */}
                 {activeLead && (
                     <div className="mt-auto p-4 bg-green-50 border-t border-green-100">
-                        <p className="text-xs font-bold text-green-600 uppercase mb-1">Customer in-store</p>
+                        <p className="text-xs font-bold text-green-600 uppercase mb-1">Client Seated</p>
                         <div className="font-bold text-slate-800">{activeLead.name}</div>
                         <div className="text-xs text-slate-500">{activeLead.configuration} • {activeLead.mobile}</div>
                         <button 
@@ -216,39 +226,65 @@ const SalesModule: React.FC<SalesModuleProps> = ({
                 {/* VIEW: SITE VISITS */}
                 {viewMode === 'visits' && (
                     <div className="p-8 overflow-y-auto">
-                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Scheduled Visits (Today)</h2>
-                        {scheduledVisits.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {scheduledVisits.map(lead => (
-                                    <div key={lead.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Client Queue (Closing Team)</h2>
+                        
+                        {/* Section 1: Arrived & Waiting (Negotiation) */}
+                        <div className="mb-8">
+                             <h3 className="text-lg font-bold text-slate-600 mb-4 flex items-center gap-2">
+                                 <span className="w-3 h-3 rounded-full bg-green-500"></span> On Floor (Checked In)
+                             </h3>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {activeVisits.map(lead => (
+                                    <div key={lead.id} className="bg-white p-6 rounded-xl border border-green-200 shadow-sm flex flex-col gap-4 relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <h3 className="font-bold text-lg text-slate-800">{lead.name}</h3>
+                                                <p className="text-slate-500 text-sm flex items-center gap-1"><Calendar className="w-3 h-3" /> Arrived Just Now</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded">
+                                            <span className="font-medium">Interested:</span> {lead.project} ({lead.configuration})<br/>
+                                            <span className="font-medium">Prev Agent:</span> {lead.remarksHistory.find(r => r.text.includes('HANDOVER'))?.text.split('Presales (')[1]?.split(')')[0] || 'Unknown'}
+                                        </div>
+                                        <button 
+                                            onClick={() => handleAttend(lead)}
+                                            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"
+                                        >
+                                            <CheckCircle className="w-4 h-4" /> Start Meeting
+                                        </button>
+                                    </div>
+                                ))}
+                                {activeVisits.length === 0 && <p className="text-slate-400 italic text-sm">No clients waiting in reception.</p>}
+                             </div>
+                        </div>
+
+                        {/* Section 2: Expected */}
+                        <div>
+                             <h3 className="text-lg font-bold text-slate-600 mb-4 flex items-center gap-2">
+                                 <span className="w-3 h-3 rounded-full bg-yellow-400"></span> Expected Today
+                             </h3>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {upcomingVisits.map(lead => (
+                                    <div key={lead.id} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4 opacity-75">
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h3 className="font-bold text-lg text-slate-800">{lead.name}</h3>
                                                 <p className="text-slate-500 text-sm flex items-center gap-1"><Calendar className="w-3 h-3" /> {lead.followUpTime}</p>
                                             </div>
-                                            <div className="bg-yellow-100 p-2 rounded-full text-yellow-600">
-                                                <User className="w-5 h-5" />
-                                            </div>
                                         </div>
                                         <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded">
                                             <span className="font-medium">Project:</span> {lead.project}<br/>
-                                            <span className="font-medium">Agent:</span> {lead.agentName}
+                                            <span className="font-medium">Presales:</span> {lead.agentName}
                                         </div>
-                                        <button 
-                                            onClick={() => handleCheckIn(lead)}
-                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-md transition flex items-center justify-center gap-2"
-                                        >
-                                            <CheckCircle className="w-4 h-4" /> Check-In
-                                        </button>
+                                        <div className="w-full py-2 bg-slate-100 text-slate-400 text-center rounded-lg text-sm font-medium">
+                                            Not Checked In
+                                        </div>
                                     </div>
                                 ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 text-slate-400">
-                                <Calendar className="w-16 h-16 mx-auto mb-4 opacity-20" />
-                                <p className="text-lg">No scheduled visits for today.</p>
-                            </div>
-                        )}
+                                {upcomingVisits.length === 0 && <p className="text-slate-400 italic text-sm">No scheduled visits pending.</p>}
+                             </div>
+                        </div>
                     </div>
                 )}
 
@@ -370,7 +406,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({
                                             </div>
                                             <div className="p-4 space-y-3 text-sm">
                                                 <div className="flex justify-between">
-                                                    <span className="text-slate-500">Base Price (₹{pricingConfig.baseRate}/sqft)</span>
+                                                    <span className="text-slate-500">Base Price (₹{Number(pricingConfig?.baseRate ?? 0)}/sqft)</span>
                                                     <span>₹{costSheet.baseCost.toLocaleString()}</span>
                                                 </div>
                                                 <div className="flex justify-between">
@@ -385,14 +421,14 @@ const SalesModule: React.FC<SalesModuleProps> = ({
                                                     <span className="text-slate-500 flex items-center gap-1">
                                                         <input type="checkbox" checked={parkingSelected} onChange={(e) => setParkingSelected(e.target.checked)} /> Parking
                                                     </span>
-                                                    <span>₹{(parkingSelected ? pricingConfig.parking : 0).toLocaleString()}</span>
+                                                    <span>₹{(parkingSelected ? Number(pricingConfig?.parking ?? 0) : 0).toLocaleString()}</span>
                                                 </div>
                                                 <div className="flex justify-between border-t border-dashed border-slate-300 pt-2">
                                                     <span className="text-slate-500 flex items-center gap-1">
                                                         Taxes & Duties
                                                         <Tooltip text="GST + Stamp Duty + Registration. Paid to Govt." />
                                                     </span>
-                                                    <span>₹{(costSheet.taxes + (costSheet.baseCost * pricingConfig.stampDuty) + pricingConfig.registration).toLocaleString()}</span>
+                                                    <span>₹{(Number(costSheet.taxes) + (Number(costSheet.baseCost) * Number(pricingConfig?.stampDuty ?? 0)) + Number(pricingConfig?.registration ?? 0)).toLocaleString()}</span>
                                                 </div>
                                                 
                                                 {/* Discount Slider */}
@@ -406,7 +442,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({
                                                         value={discount} 
                                                         onChange={(e) => {
                                                             setDiscount(Number(e.target.value));
-                                                            if (Number(e.target.value) > pricingConfig.maxDiscount) setApprovalRequested(true);
+                                                            if (Number(e.target.value) > Number(pricingConfig?.maxDiscount ?? 0)) setApprovalRequested(true);
                                                             else setApprovalRequested(false);
                                                         }} 
                                                         className="w-full accent-yellow-600 h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer"
@@ -420,7 +456,7 @@ const SalesModule: React.FC<SalesModuleProps> = ({
 
                                                 {approvalRequested && (
                                                     <div className="bg-red-50 text-red-600 text-xs p-2 rounded border border-red-100 flex items-center gap-2">
-                                                        <AlertTriangle className="w-4 h-4" /> Approval required for > ₹{pricingConfig.maxDiscount}/sqft
+                                                        <AlertTriangle className="w-4 h-4" /> Approval required for > ₹{pricingConfig?.maxDiscount}/sqft
                                                     </div>
                                                 )}
 
